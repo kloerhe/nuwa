@@ -83,7 +83,7 @@ jobs:
           source .venv/bin/activate
 
           echo "=== west init ==="
-          west init -l .
+          west init -m https://github.com/Ameba-AIoT/nuwa.git
 
           echo "=== west update ==="
           west update
