@@ -1,4 +1,4 @@
-name: macOS Build Smoke Test
+name: macOS Build Test
 
 on:
   workflow_dispatch:
@@ -8,119 +8,86 @@ jobs:
     runs-on: macos-15
 
     steps:
-      # ------------------------------------------------------------
-      # 1. macOS environment
-      # ------------------------------------------------------------
-      - name: Show macOS environment
-        run: |
-          sw_vers
-          uname -a
-          uname -m
-
-      # ------------------------------------------------------------
-      # 2. Install host dependencies
-      # ------------------------------------------------------------
+      # --------------------------------------------------
+      # 1. Install host dependencies
+      # --------------------------------------------------
       - name: Install dependencies
         run: |
           brew install python cmake ninja
 
-      # ------------------------------------------------------------
-      # 3. Setup Python virtual environment
-      # ------------------------------------------------------------
-      - name: Setup Python
+      # --------------------------------------------------
+      # 2. Create Python virtual environment
+      # --------------------------------------------------
+      - name: Setup Python environment
         run: |
-          python3 -m venv "$HOME/nuwa-venv"
-
-          source "$HOME/nuwa-venv/bin/activate"
+          python3 -m venv "$HOME/nuwa/.venv"
+          source "$HOME/nuwa/.venv/bin/activate"
 
           python -m pip install --upgrade pip
           python -m pip install west
+
+          echo "Python:"
+          python --version
+
+          echo "West:"
+          west --version
+
+      # --------------------------------------------------
+      # 3. Get Nuwa SDK
+      # --------------------------------------------------
+      - name: Get Nuwa SDK
+        run: |
+          source "$HOME/nuwa/.venv/bin/activate"
+
+          mkdir -p "$HOME/nuwa"
+          cd "$HOME/nuwa"
+
+          west init -m https://github.com/Ameba-AIoT/nuwa.git
+          west update
+
+      # --------------------------------------------------
+      # 4. Create nuwa.py shortcut
+      # --------------------------------------------------
+      - name: Create nuwa.py shortcut
+        run: |
+          cd "$HOME/nuwa"
+
+          ln -sf tools/meta_tools/nuwa.py nuwa.py
+
+          echo "=== Nuwa SDK root ==="
+          pwd
+
+          echo "=== Directory ==="
+          ls -al
+
+          echo "=== nuwa.py ==="
+          ls -l nuwa.py
+
+      # --------------------------------------------------
+      # 5. Test Nuwa
+      # --------------------------------------------------
+      - name: Test Nuwa
+        run: |
+          source "$HOME/nuwa/.venv/bin/activate"
+
+          cd "$HOME/nuwa"
 
           echo "=== Python ==="
           which python
           python --version
 
-          echo "=== West ==="
-          which west
-          west --version
+          echo "=== Nuwa ==="
+          ./nuwa.py --help
 
-      # ------------------------------------------------------------
-      # 4. Create a clean West workspace
-      #
-      # IMPORTANT:
-      # The West workspace topdir must NOT be a Git repository.
-      # Therefore we do NOT use actions/checkout.
-      # ------------------------------------------------------------
-      - name: Initialize Nuwa workspace
-        run: |
-          source "$HOME/nuwa-venv/bin/activate"
-
-          mkdir -p "$HOME/nuwa-workspace"
-          cd "$HOME/nuwa-workspace"
-
-          west init \
-            -m https://github.com/Ameba-AIoT/nuwa.git
-
-          west update
-
-      # ------------------------------------------------------------
-      # 5. Inspect workspace
-      # ------------------------------------------------------------
-      - name: Inspect workspace
-        run: |
-          source "$HOME/nuwa-venv/bin/activate"
-
-          cd "$HOME/nuwa-workspace"
-
-          echo "=== West topdir ==="
-          west topdir
-
-          echo "=== Workspace root ==="
-          pwd
-
-          echo "=== Workspace files ==="
-          ls -la
-
-          echo "=== West projects ==="
-          west list
-
-          echo "=== Tools ==="
-          ls -la tools
-
-          echo "=== Nuwa meta tool ==="
-          ls -l tools/meta_tools/nuwa.py
-
-      # ------------------------------------------------------------
-      # 6. Test Nuwa meta tool
-      # ------------------------------------------------------------
-      - name: Test Nuwa meta tool
-        run: |
-          source "$HOME/nuwa-venv/bin/activate"
-
-          cd "$HOME/nuwa-workspace"
-
-          echo "=== SDK root ==="
-          west topdir
-
-          echo "=== Current directory ==="
-          pwd
-
-          echo "=== Nuwa help ==="
-          python tools/meta_tools/nuwa.py --help
-
-      # ------------------------------------------------------------
-      # 7. Build hello_world
-      # ------------------------------------------------------------
+      # --------------------------------------------------
+      # 6. Build hello_world
+      # --------------------------------------------------
       - name: Build hello_world
         run: |
-          source "$HOME/nuwa-venv/bin/activate"
+          source "$HOME/nuwa/.venv/bin/activate"
 
-          cd "$HOME/nuwa-workspace"
+          cd "$HOME/nuwa"
 
-          echo "=== SDK root ==="
-          west topdir
-
-          echo "=== Build ==="
-          python tools/meta_tools/nuwa.py build \
+          ./nuwa.py build \
             -b rtl872xda_evb \
             zephyr/samples/hello_world
