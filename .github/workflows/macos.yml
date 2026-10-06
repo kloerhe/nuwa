@@ -37,6 +37,11 @@ jobs:
           west init -l .
           west update
 
+      - name: Create Nuwa launcher
+        run: |
+          ln -sf tools/meta_tools/nuwa.py nuwa.py
+          ls -l nuwa.py
+
       - name: Build hello_world
         run: |
           source .venv/bin/activate
