@@ -25,13 +25,13 @@ jobs:
           brew install python cmake ninja
 
       # ------------------------------------------------------------
-      # 3. Python virtual environment
+      # 3. Setup Python virtual environment
       # ------------------------------------------------------------
       - name: Setup Python
         run: |
-          python3 -m venv .venv
+          python3 -m venv "$HOME/nuwa-venv"
 
-          source .venv/bin/activate
+          source "$HOME/nuwa-venv/bin/activate"
 
           python -m pip install --upgrade pip
           python -m pip install west
@@ -45,11 +45,18 @@ jobs:
           west --version
 
       # ------------------------------------------------------------
-      # 4. Initialize official Nuwa workspace
+      # 4. Create a clean West workspace
+      #
+      # IMPORTANT:
+      # The West workspace topdir must NOT be a Git repository.
+      # Therefore we do NOT use actions/checkout.
       # ------------------------------------------------------------
       - name: Initialize Nuwa workspace
         run: |
-          source .venv/bin/activate
+          source "$HOME/nuwa-venv/bin/activate"
+
+          mkdir -p "$HOME/nuwa-workspace"
+          cd "$HOME/nuwa-workspace"
 
           west init \
             -m https://github.com/Ameba-AIoT/nuwa.git
@@ -57,43 +64,46 @@ jobs:
           west update
 
       # ------------------------------------------------------------
-      # 5. Inspect West workspace
+      # 5. Inspect workspace
       # ------------------------------------------------------------
       - name: Inspect workspace
         run: |
-          source .venv/bin/activate
+          source "$HOME/nuwa-venv/bin/activate"
 
-          echo "=== west topdir ==="
+          cd "$HOME/nuwa-workspace"
+
+          echo "=== West topdir ==="
           west topdir
 
-          echo "=== current directory ==="
+          echo "=== Workspace root ==="
           pwd
 
-          echo "=== west list ==="
+          echo "=== Workspace files ==="
+          ls -la
+
+          echo "=== West projects ==="
           west list
 
-          echo "=== workspace directories ==="
-          find "$(west topdir)" -maxdepth 2 -type d | sort
+          echo "=== Tools ==="
+          ls -la tools
+
+          echo "=== Nuwa meta tool ==="
+          ls -l tools/meta_tools/nuwa.py
 
       # ------------------------------------------------------------
       # 6. Test Nuwa meta tool
       # ------------------------------------------------------------
       - name: Test Nuwa meta tool
         run: |
-          source .venv/bin/activate
+          source "$HOME/nuwa-venv/bin/activate"
 
-          SDK_ROOT="$(west topdir)"
+          cd "$HOME/nuwa-workspace"
 
           echo "=== SDK root ==="
-          echo "$SDK_ROOT"
-
-          cd "$SDK_ROOT"
+          west topdir
 
           echo "=== Current directory ==="
           pwd
-
-          echo "=== Nuwa tool ==="
-          ls -l tools/meta_tools/nuwa.py
 
           echo "=== Nuwa help ==="
           python tools/meta_tools/nuwa.py --help
@@ -103,13 +113,12 @@ jobs:
       # ------------------------------------------------------------
       - name: Build hello_world
         run: |
-          source .venv/bin/activate
+          source "$HOME/nuwa-venv/bin/activate"
 
-          SDK_ROOT="$(west topdir)"
-          cd "$SDK_ROOT"
+          cd "$HOME/nuwa-workspace"
 
-          echo "=== Build directory ==="
-          pwd
+          echo "=== SDK root ==="
+          west topdir
 
           echo "=== Build ==="
           python tools/meta_tools/nuwa.py build \
