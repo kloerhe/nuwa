@@ -18,21 +18,28 @@ jobs:
           uname -m
           python3 --version
           cmake --version
-          ninja --version || true
+          ninja --version
 
       - name: Install dependencies
         run: |
           brew install python cmake ninja
-          python3 -m pip install --upgrade pip
-          python3 -m pip install west
+
+      - name: Setup Python virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install west
 
       - name: Initialize west
         run: |
+          source .venv/bin/activate
           west init -l .
           west update
 
       - name: Build hello_world
         run: |
+          source .venv/bin/activate
           ./nuwa.py build \
             -b rtl872xda_evb \
             zephyr/samples/hello_world
