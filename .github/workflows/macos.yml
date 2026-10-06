@@ -27,7 +27,7 @@ jobs:
       # --------------------------------------------------
       # 2. Build Mbed TLS 2.28
       #
-      # python-mbedtls currently expects the Mbed TLS 2.x API.
+      # python-mbedtls expects the Mbed TLS 2.x API.
       # Do NOT use Homebrew mbedtls@3 here.
       # --------------------------------------------------
       - name: Build Mbed TLS 2.28
@@ -47,7 +47,8 @@ jobs:
 
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/mbedtls"
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/mbedtls" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
           cmake --build . --parallel
           cmake --install .
@@ -69,6 +70,7 @@ jobs:
           echo "LDFLAGS=-L${MBEDTLS_PREFIX}/lib" >> "$GITHUB_ENV"
           echo "LIBRARY_PATH=${MBEDTLS_PREFIX}/lib" >> "$GITHUB_ENV"
           echo "DYLD_LIBRARY_PATH=${MBEDTLS_PREFIX}/lib" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=${MBEDTLS_PREFIX}/lib/pkgconfig" >> "$GITHUB_ENV"
 
           echo "=== Check Mbed TLS header ==="
           test -f \
@@ -103,6 +105,10 @@ jobs:
           "$HOME/nuwa/.venv/bin/python" \
             -c "import sys; print(sys.executable)"
 
+          echo "=== Pip ==="
+          "$HOME/nuwa/.venv/bin/python" \
+            -m pip --version
+
           echo "=== West ==="
           "$HOME/nuwa/.venv/bin/west" --version
 
@@ -131,6 +137,9 @@ jobs:
 
           echo "=== Nuwa SDK root ==="
           pwd
+
+          echo "=== Directory ==="
+          ls -al
 
           echo "=== nuwa.py ==="
           ls -l nuwa.py
@@ -165,6 +174,8 @@ jobs:
       # --------------------------------------------------
       - name: Verify python-mbedtls
         run: |
+          echo "=== python-mbedtls import ==="
+
           "$HOME/nuwa/.venv/bin/python" \
             -c "import mbedtls; print(mbedtls.__file__)"
 
