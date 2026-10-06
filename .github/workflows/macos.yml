@@ -13,37 +13,52 @@ jobs:
       # --------------------------------------------------
       - name: Install dependencies
         run: |
-          brew install python cmake ninja
+          brew install python@3.13 cmake ninja
+
+          echo "=== Python ==="
+          /opt/homebrew/opt/python@3.13/bin/python3.13 --version
+
+          echo "=== CMake ==="
+          cmake --version
+
+          echo "=== Ninja ==="
+          ninja --version
 
       # --------------------------------------------------
       # 2. Create Python virtual environment
       # --------------------------------------------------
       - name: Setup Python environment
         run: |
-          python3 -m venv "$HOME/nuwa/.venv"
-          source "$HOME/nuwa/.venv/bin/activate"
+          /opt/homebrew/opt/python@3.13/bin/python3.13 \
+            -m venv "$HOME/nuwa/.venv"
 
-          python -m pip install --upgrade pip
-          python -m pip install west
+          "$HOME/nuwa/.venv/bin/python" \
+            -m pip install --upgrade pip
 
-          echo "Python:"
-          python --version
+          "$HOME/nuwa/.venv/bin/python" \
+            -m pip install west
 
-          echo "West:"
-          west --version
+          echo "=== Python ==="
+          "$HOME/nuwa/.venv/bin/python" --version
+
+          echo "=== Pip ==="
+          "$HOME/nuwa/.venv/bin/python" -m pip --version
+
+          echo "=== West ==="
+          "$HOME/nuwa/.venv/bin/west" --version
 
       # --------------------------------------------------
       # 3. Get Nuwa SDK
       # --------------------------------------------------
       - name: Get Nuwa SDK
         run: |
-          source "$HOME/nuwa/.venv/bin/activate"
-
           mkdir -p "$HOME/nuwa"
           cd "$HOME/nuwa"
 
-          west init -m https://github.com/Ameba-AIoT/nuwa.git
-          west update
+          "$HOME/nuwa/.venv/bin/west" \
+            init -m https://github.com/Ameba-AIoT/nuwa.git
+
+          "$HOME/nuwa/.venv/bin/west" update
 
       # --------------------------------------------------
       # 4. Create nuwa.py shortcut
@@ -64,30 +79,37 @@ jobs:
           ls -l nuwa.py
 
       # --------------------------------------------------
-      # 5. Test Nuwa
+      # 5. Install Nuwa Python dependencies
+      # --------------------------------------------------
+      - name: Install Nuwa Python dependencies
+        run: |
+          cd "$HOME/nuwa"
+
+          "$HOME/nuwa/.venv/bin/python" \
+            -m pip install -r modules/hal/realtek/ameba/scripts/requirements.txt
+
+      # --------------------------------------------------
+      # 6. Test Nuwa
       # --------------------------------------------------
       - name: Test Nuwa
         run: |
-          source "$HOME/nuwa/.venv/bin/activate"
-
           cd "$HOME/nuwa"
 
           echo "=== Python ==="
-          which python
-          python --version
+          "$HOME/nuwa/.venv/bin/python" --version
+          "$HOME/nuwa/.venv/bin/python" -c \
+            "import sys; print(sys.executable)"
 
           echo "=== Nuwa ==="
-          ./nuwa.py --help
+          "$HOME/nuwa/.venv/bin/python" ./nuwa.py --help
 
       # --------------------------------------------------
-      # 6. Build hello_world
+      # 7. Build hello_world
       # --------------------------------------------------
       - name: Build hello_world
         run: |
-          source "$HOME/nuwa/.venv/bin/activate"
-
           cd "$HOME/nuwa"
 
-          ./nuwa.py build \
+          "$HOME/nuwa/.venv/bin/python" ./nuwa.py build \
             -b rtl872xda_evb \
             zephyr/samples/hello_world
