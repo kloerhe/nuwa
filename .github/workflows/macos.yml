@@ -1,0 +1,38 @@
+name: macOS Build Smoke Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Show environment
+        run: |
+          sw_vers
+          uname -a
+          uname -m
+          python3 --version
+          cmake --version
+          ninja --version || true
+
+      - name: Install dependencies
+        run: |
+          brew install python cmake ninja
+          python3 -m pip install --upgrade pip
+          python3 -m pip install west
+
+      - name: Initialize west
+        run: |
+          west init -l .
+          west update
+
+      - name: Build hello_world
+        run: |
+          ./nuwa.py build \
+            -b rtl872xda_evb \
+            zephyr/samples/hello_world
