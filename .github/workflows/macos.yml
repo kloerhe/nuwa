@@ -9,155 +9,109 @@ jobs:
 
     steps:
       # ------------------------------------------------------------
-      # 1. Checkout
+      # 1. macOS environment
       # ------------------------------------------------------------
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      # ------------------------------------------------------------
-      # 2. Host environment
-      # ------------------------------------------------------------
-      - name: Show host environment
+      - name: Show macOS environment
         run: |
-          echo "=== macOS ==="
           sw_vers
-
-          echo "=== Kernel / Architecture ==="
           uname -a
           uname -m
 
-          echo "=== Working directory ==="
-          pwd
-
-          echo "=== PATH ==="
-          echo "$PATH"
-
       # ------------------------------------------------------------
-      # 3. Check / install host tools
+      # 2. Install host dependencies
       # ------------------------------------------------------------
-      - name: Check host tools
-        run: |
-          echo "=== Homebrew ==="
-          brew --version
-
-          echo "=== Python ==="
-          python3 --version
-          which python3
-
-          echo "=== CMake ==="
-          cmake --version
-          which cmake
-
-          echo "=== Ninja ==="
-          ninja --version
-          which ninja
-
       - name: Install dependencies
         run: |
           brew install python cmake ninja
 
       # ------------------------------------------------------------
-      # 4. Python virtual environment
+      # 3. Python virtual environment
       # ------------------------------------------------------------
-      - name: Setup Python virtual environment
+      - name: Setup Python
         run: |
           python3 -m venv .venv
 
           source .venv/bin/activate
 
-          python --version
-          which python
-
           python -m pip install --upgrade pip
           python -m pip install west
-
-          echo "=== west ==="
-          west --version
-          which west
-
-      # ------------------------------------------------------------
-      # 5. Initialize west
-      # ------------------------------------------------------------
-      - name: Initialize west
-        run: |
-          source .venv/bin/activate
-
-          echo "=== west init ==="
-          west init -m https://github.com/Ameba-AIoT/nuwa.git
-
-          echo "=== west update ==="
-          west update
-
-      # ------------------------------------------------------------
-      # 6. Inspect Nuwa
-      # ------------------------------------------------------------
-      - name: Inspect Nuwa
-        run: |
-          echo "=== Repository root ==="
-          pwd
-          ls -la
-
-          echo "=== tools/meta_tools ==="
-          ls -la tools/meta_tools || true
-
-          echo "=== Nuwa source ==="
-          ls -l tools/meta_tools/nuwa.py
-
-          echo "=== Nuwa file type ==="
-          file tools/meta_tools/nuwa.py
-
-          echo "=== Nuwa shebang ==="
-          head -n 1 tools/meta_tools/nuwa.py
-
-      # ------------------------------------------------------------
-      # 7. Create Nuwa launcher
-      # ------------------------------------------------------------
-      - name: Create Nuwa launcher
-        run: |
-          ln -sf tools/meta_tools/nuwa.py nuwa.py
-
-          echo "=== nuwa.py symlink ==="
-          ls -l nuwa.py
-
-          echo "=== resolve symlink ==="
-          readlink nuwa.py
-
-          echo "=== target exists ==="
-          test -f tools/meta_tools/nuwa.py
-
-      # ------------------------------------------------------------
-      # 8. Test Nuwa with Python directly
-      # ------------------------------------------------------------
-      - name: Test Nuwa Python entrypoint
-        run: |
-          source .venv/bin/activate
 
           echo "=== Python ==="
           which python
           python --version
 
+          echo "=== West ==="
+          which west
+          west --version
+
+      # ------------------------------------------------------------
+      # 4. Initialize official Nuwa workspace
+      # ------------------------------------------------------------
+      - name: Initialize Nuwa workspace
+        run: |
+          source .venv/bin/activate
+
+          west init \
+            -m https://github.com/Ameba-AIoT/nuwa.git
+
+          west update
+
+      # ------------------------------------------------------------
+      # 5. Inspect West workspace
+      # ------------------------------------------------------------
+      - name: Inspect workspace
+        run: |
+          source .venv/bin/activate
+
+          echo "=== west topdir ==="
+          west topdir
+
+          echo "=== current directory ==="
+          pwd
+
+          echo "=== west list ==="
+          west list
+
+          echo "=== workspace directories ==="
+          find "$(west topdir)" -maxdepth 2 -type d | sort
+
+      # ------------------------------------------------------------
+      # 6. Test Nuwa meta tool
+      # ------------------------------------------------------------
+      - name: Test Nuwa meta tool
+        run: |
+          source .venv/bin/activate
+
+          SDK_ROOT="$(west topdir)"
+
+          echo "=== SDK root ==="
+          echo "$SDK_ROOT"
+
+          cd "$SDK_ROOT"
+
+          echo "=== Current directory ==="
+          pwd
+
+          echo "=== Nuwa tool ==="
+          ls -l tools/meta_tools/nuwa.py
+
           echo "=== Nuwa help ==="
           python tools/meta_tools/nuwa.py --help
 
       # ------------------------------------------------------------
-      # 9. Build hello_world
-      #
-      # Use Python directly instead of ./nuwa.py so that a possible
-      # shebang / executable issue does not hide the real build result.
+      # 7. Build hello_world
       # ------------------------------------------------------------
       - name: Build hello_world
         run: |
           source .venv/bin/activate
 
-          echo "=== Build environment ==="
-          which python
-          python --version
-          which west
-          west --version
-          cmake --version
-          ninja --version
+          SDK_ROOT="$(west topdir)"
+          cd "$SDK_ROOT"
 
-          echo "=== Nuwa build ==="
+          echo "=== Build directory ==="
+          pwd
+
+          echo "=== Build ==="
           python tools/meta_tools/nuwa.py build \
             -b rtl872xda_evb \
             zephyr/samples/hello_world
