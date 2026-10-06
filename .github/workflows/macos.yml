@@ -13,7 +13,7 @@ jobs:
       # --------------------------------------------------
       - name: Install dependencies
         run: |
-          brew install python@3.13 cmake ninja
+          brew install python@3.13 cmake ninja mbedtls@3
 
           echo "=== Python ==="
           /opt/homebrew/opt/python@3.13/bin/python3.13 --version
@@ -24,8 +24,31 @@ jobs:
           echo "=== Ninja ==="
           ninja --version
 
+          echo "=== mbedTLS ==="
+          brew --prefix mbedtls@3
+
       # --------------------------------------------------
-      # 2. Create Python virtual environment
+      # 2. Setup mbedTLS environment
+      # --------------------------------------------------
+      - name: Setup mbedTLS
+        run: |
+          MBEDTLS_PREFIX="$(brew --prefix mbedtls@3)"
+
+          echo "MBEDTLS_PREFIX=$MBEDTLS_PREFIX"
+
+          echo "CPPFLAGS=-I${MBEDTLS_PREFIX}/include" >> "$GITHUB_ENV"
+          echo "CFLAGS=-I${MBEDTLS_PREFIX}/include" >> "$GITHUB_ENV"
+          echo "LDFLAGS=-L${MBEDTLS_PREFIX}/lib" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=${MBEDTLS_PREFIX}/lib/pkgconfig" >> "$GITHUB_ENV"
+
+          echo "=== Check header ==="
+          test -f "${MBEDTLS_PREFIX}/include/mbedtls/platform_util.h"
+
+          echo "Found:"
+          ls -l "${MBEDTLS_PREFIX}/include/mbedtls/platform_util.h"
+
+      # --------------------------------------------------
+      # 3. Create Python virtual environment
       # --------------------------------------------------
       - name: Setup Python environment
         run: |
@@ -41,14 +64,15 @@ jobs:
           echo "=== Python ==="
           "$HOME/nuwa/.venv/bin/python" --version
 
-          echo "=== Pip ==="
-          "$HOME/nuwa/.venv/bin/python" -m pip --version
+          echo "=== Python executable ==="
+          "$HOME/nuwa/.venv/bin/python" -c \
+            "import sys; print(sys.executable)"
 
           echo "=== West ==="
           "$HOME/nuwa/.venv/bin/west" --version
 
       # --------------------------------------------------
-      # 3. Get Nuwa SDK
+      # 4. Get Nuwa SDK
       # --------------------------------------------------
       - name: Get Nuwa SDK
         run: |
@@ -61,7 +85,7 @@ jobs:
           "$HOME/nuwa/.venv/bin/west" update
 
       # --------------------------------------------------
-      # 4. Create nuwa.py shortcut
+      # 5. Create nuwa.py shortcut
       # --------------------------------------------------
       - name: Create nuwa.py shortcut
         run: |
@@ -69,42 +93,29 @@ jobs:
 
           ln -sf tools/meta_tools/nuwa.py nuwa.py
 
-          echo "=== Nuwa SDK root ==="
-          pwd
-
-          echo "=== Directory ==="
-          ls -al
-
-          echo "=== nuwa.py ==="
           ls -l nuwa.py
 
       # --------------------------------------------------
-      # 5. Install Nuwa Python dependencies
+      # 6. Install Ameba Python dependencies
       # --------------------------------------------------
-      - name: Install Nuwa Python dependencies
+      - name: Install Ameba Python dependencies
         run: |
           cd "$HOME/nuwa"
 
-          "$HOME/nuwa/.venv/bin/python" \
-            -m pip install -r modules/hal/realtek/ameba/scripts/requirements.txt
+          "$HOME/nuwa/.venv/bin/python" -m pip install -v \
+            -r modules/hal/realtek/ameba/scripts/requirements.txt
 
       # --------------------------------------------------
-      # 6. Test Nuwa
+      # 7. Test Nuwa
       # --------------------------------------------------
       - name: Test Nuwa
         run: |
           cd "$HOME/nuwa"
 
-          echo "=== Python ==="
-          "$HOME/nuwa/.venv/bin/python" --version
-          "$HOME/nuwa/.venv/bin/python" -c \
-            "import sys; print(sys.executable)"
-
-          echo "=== Nuwa ==="
           "$HOME/nuwa/.venv/bin/python" ./nuwa.py --help
 
       # --------------------------------------------------
-      # 7. Build hello_world
+      # 8. Build hello_world
       # --------------------------------------------------
       - name: Build hello_world
         run: |
